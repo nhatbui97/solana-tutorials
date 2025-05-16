@@ -1,4 +1,14 @@
 # Part One - Environment Setup
+Before writing or deploying smart contracts on Solana, we need to set up a proper development environment. This part will walk you through everything you need to get started, from installing key tools to creating your first Anchor project.
+
+### In this section, you will:
+✅ Install Rust, the programming language used to write Solana programs  
+✅ Install the Solana CLI, which allows you to interact with the blockchain  
+✅ Install the Anchor framework, the most popular toolkit for Solana development  
+
+By the end of this part, you’ll have everything you need to build, test, and deploy Solana smart contracts on Devnet.
+
+Let’s get started! 🚀
 
 ### 1. Install Rust
 
@@ -79,10 +89,10 @@ This prints an array of numbers like:
 
 Import this to Phantom Wallet and turn on Testnet Mode:
 <p float="left">
-  <img src="../Example Images/ImportPhantom1.png" alt="Step 1" width="300" height="500" style="margin-right: 10px;"/>
-  <img src="../Example Images/ImportPhantom2.png" alt="Step 2" width="300" height="500" style="margin-right: 10px;"/>
-  <img src="../Example Images/ImportPhantom3.png" alt="Step 3" width="300" height="500" style="margin-right: 10px;"/>
-  <img src="../Example Images/ImportPhantom4.png" alt="Step 4" width="300" height="500"/>
+  <img src="../Example Images/01-ImportPhantom1.png" alt="Step 1" width="240" height="400" style="margin-right: 10px;"/>
+  <img src="../Example Images/01-ImportPhantom2.png" alt="Step 2" width="240" height="400" style="margin-right: 10px;"/>
+  <img src="../Example Images/01-ImportPhantom3.png" alt="Step 3" width="240" height="400" style="margin-right: 10px;"/>
+  <img src="../Example Images/01-ImportPhantom4.png" alt="Step 4" width="240" height="400"/>
 </p>
 
 ### 3. Install Anchor CLI
