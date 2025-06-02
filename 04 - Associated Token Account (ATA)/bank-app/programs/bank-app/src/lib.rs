@@ -8,7 +8,7 @@ pub mod transfer_helper;
 
 use instructions::*;
 
-declare_id!("61BGW7iSWU8Kwj47kBZWreeHjLVASxPUFQyzwUTpJfCR");
+declare_id!("3q57ftWH75aKfxoNnV6Lu1n8LhV73xxKHAxPapL6Jvh7");
 
 #[program]
 pub mod bank_app {

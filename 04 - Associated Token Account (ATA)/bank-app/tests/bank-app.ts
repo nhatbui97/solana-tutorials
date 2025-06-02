@@ -1,8 +1,9 @@
 import * as anchor from "@coral-xyz/anchor";
 import { Program } from "@coral-xyz/anchor";
 import { BankApp } from "../target/types/bank_app";
-import { PublicKey, SystemProgram } from "@solana/web3.js";
+import { PublicKey, SystemProgram, TransactionInstruction } from "@solana/web3.js";
 import { BN } from "bn.js";
+import { createAssociatedTokenAccountInstruction, getAssociatedTokenAddressSync, TOKEN_PROGRAM_ID } from "@solana/spl-token";
 
 describe("bank-app", () => {
   // Configure the client to use the local cluster.
@@ -16,13 +17,21 @@ describe("bank-app", () => {
       [Buffer.from("BANK_INFO_SEED")],
       program.programId
     )[0],
-    userReserve: (pubkey: PublicKey) => PublicKey.findProgramAddressSync(
-      [
+    userReserve: (pubkey: PublicKey, tokenMint?: PublicKey) => {
+      let SEEDS = [
         Buffer.from("USER_RESERVE_SEED"),
-        pubkey.toBuffer()
-      ],
-      program.programId
-    )[0],
+        pubkey.toBuffer(),
+      ]
+
+      if (tokenMint != undefined) {
+        SEEDS.push(tokenMint.toBuffer())
+      }
+
+      return PublicKey.findProgramAddressSync(
+        SEEDS,
+        program.programId
+      )[0]
+    }
   }
 
   it("Is initialized!", async () => {
@@ -51,6 +60,38 @@ describe("bank-app", () => {
     console.log("Deposit signature: ", tx);
 
     const userReserve = await program.account.userReserve.fetch(BANK_APP_ACCOUNTS.userReserve(provider.publicKey))
+    console.log("User reserve: ", userReserve.depositedAmount.toString())
+  });
+
+  it("Is deposited token!", async () => {
+    let tokenMint = new PublicKey("FBUoe8bLbPBh4VcF4jwg1L53XZBdSJoERry16u26UnNL") //you should put your token mint here
+    let userAta = getAssociatedTokenAddressSync(tokenMint, provider.publicKey)
+    let bankAta = getAssociatedTokenAddressSync(tokenMint, BANK_APP_ACCOUNTS.bankInfo, true)
+
+    let preInstructions: TransactionInstruction[] = []
+    if (await provider.connection.getAccountInfo(bankAta) == null) {
+      preInstructions.push(createAssociatedTokenAccountInstruction(
+        provider.publicKey,
+        bankAta,
+        BANK_APP_ACCOUNTS.bankInfo,
+        tokenMint
+      ))
+    }
+
+    const tx = await program.methods.depositToken(new BN(1_000_000_000))
+      .accounts({
+        bankInfo: BANK_APP_ACCOUNTS.bankInfo,
+        tokenMint,
+        userAta,
+        bankAta,
+        userReserve: BANK_APP_ACCOUNTS.userReserve(provider.publicKey, tokenMint),
+        user: provider.publicKey,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        systemProgram: SystemProgram.programId
+      }).preInstructions(preInstructions).rpc();
+    console.log("Deposit token signature: ", tx);
+
+    const userReserve = await program.account.userReserve.fetch(BANK_APP_ACCOUNTS.userReserve(provider.publicKey, tokenMint))
     console.log("User reserve: ", userReserve.depositedAmount.toString())
   });
 });

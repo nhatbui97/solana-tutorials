@@ -10,6 +10,7 @@ use crate::{
 #[derive(Accounts)]
 pub struct Deposit<'info> {
     #[account(
+        mut,
         seeds = [BANK_INFO_SEED],
         bump
     )]

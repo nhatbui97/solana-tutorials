@@ -9,6 +9,7 @@ use crate::{
 #[derive(Accounts)]
 pub struct Withdraw<'info> {
     #[account(
+        mut,
         seeds = [BANK_INFO_SEED],
         bump
     )]

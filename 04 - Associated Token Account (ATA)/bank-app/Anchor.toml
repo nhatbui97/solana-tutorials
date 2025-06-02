@@ -5,7 +5,7 @@ seeds = false
 skip-lint = false
 
 [programs.localnet]
-bank_app = "61BGW7iSWU8Kwj47kBZWreeHjLVASxPUFQyzwUTpJfCR"
+bank_app = "3q57ftWH75aKfxoNnV6Lu1n8LhV73xxKHAxPapL6Jvh7"
 
 [registry]
 url = "https://api.apr.dev"
