@@ -47,7 +47,7 @@ pub struct UserReserve {
 }
 ```
 
-- `BankInfo` is a global PDA that stores the program’s state: who the `authority` is, whether the program `is_paused`, and its `bump` value.
+- `BankInfo` is a global PDA that stores the program’s state: who the `authority` is, whether the program `is_paused`, and the Bank Vault's `bump` value.
 - `UserReserve` is a user-specific PDA that tracks how much SOL each user has deposited.
 
 These PDAs are derived using seeds and something called a bump. But what exactly is a bump — and why do we store it?
@@ -56,7 +56,7 @@ When generating a PDA, Solana requires that the derived address does not lie on 
 
 To fix this, they add a small number — the bump (an 8-bit unsigned integer from 0–255) — which is adjusted automatically during PDA creation to ensure a valid address. Anchor handles the bump calculation automatically when you initialize the PDA. But if your program needs to regenerate or sign on behalf of that PDA, you must store the bump so you can reproduce the seeds or the exact address.  
 
-👉 In our example, we store the bump in `BankInfo` because the program will need this PDA to sign instructions later.
+👉 In our example, we store the bump in `BankInfo` because the program will need the Bank Vault PDA to sign instructions later.
 
 ### 2. Initializing a PDA
 Now that we understand what a PDA is, let’s walk through how to create and initialize a PDA in Anchor.  
@@ -82,14 +82,34 @@ pub struct Initialize<'info> {
 - `payer`: Creating a PDA requires storage space, and on Solana, storage comes with rent costs. The payer field specifies which signer will cover the cost of account creation — in this case, the `authority`.
 - `space`: How much space (in bytes) to allocate for the account. The more space the PDA needs, the more cost payer have to pay.  
 
-Inside the process, we can now initialize the account’s fields:
+The Bank Vault is initialized right after the `BankInfo` account, but there are a few key differences worth noting:
+```rust
+    #[account(
+        init,
+        seeds = [BANK_VAULT_SEED],
+        bump,
+        payer = authority,
+        space = 0,
+        owner = system_program::ID
+    )]
+    pub bank_vault: UncheckedAccount<'info>,
+```
+##### 🧩 What’s different here?
++ *No data storage*: Unlike `BankInfo`, this PDA doesn’t store any data — hence `space = 0`, and we don’t define a struct for it.
++ *System-owned*: The account is created with `owner = system_program::ID`, meaning it’s owned by the System Program, not your Anchor program. This might seem unusual at first, but it's intentional.
++ *Why create this PDA?*  
+This vault acts as a centralized fund holder for your entire app. Since it's a PDA derived using your program ID and a known seed, your program can still sign for it and control its SOL balance.
+
+**⚠️ Important Note**: The reason we use a System Program-owned PDA is because only accounts owned by the System Program can participate in native SOL transfers. When transferring SOL using the transfer instruction, both the sender and receiver must be system-owned accounts. That’s why we structure the vault this way — to serve as a secure, program-controlled SOL pool that users can send funds to or withdraw from. We’ll dive deeper into how this works when we implement the actual SOL transfer logic in the next section.  
+
+Now that both PDAs are created, let’s move on to the process function where we initialize the fields of our `BankInfo` account:
 ```rust
 pub fn process(ctx: Context<Initialize>) -> Result<()> {
     let bank_info = &mut ctx.accounts.bank_info;
 
     bank_info.authority = ctx.accounts.authority.key();
     bank_info.is_paused = false;
-    bank_info.bump = ctx.bumps.bank_info;
+    bank_info.bump = ctx.bumps.bank_vault;
 
     msg!("Bank initialized!");
     Ok(())
@@ -173,7 +193,7 @@ pub fn sol_transfer_from_user<'info>(
 }
 ```
 Since the user is the signer in this case, we can simply use `invoke()` to perform the transfer.  
-Later, when we implement withdrawals, the program will need to sign on behalf of the BankInfo PDA — and for that, we’ll use `invoke_signed()`.  
+Later, when we implement withdrawals, the program will need to sign on behalf of the Bank Vault PDA — and for that, we’ll use `invoke_signed()`.  
 
 Finally, we update the user’s UserReserve PDA to reflect the new deposited amount:
 ```rust
@@ -201,14 +221,18 @@ const BANK_APP_ACCOUNTS = {
         [Buffer.from("BANK_INFO_SEED")],
         program.programId
     )[0],
+    bankVault: PublicKey.findProgramAddressSync(
+        [Buffer.from("BANK_VAULT_SEED")],
+        program.programId
+    )[0],
     userReserve: (pubkey: PublicKey) => PublicKey.findProgramAddressSync(
         [
             Buffer.from("USER_RESERVE_SEED"),
             pubkey.toBuffer()
         ],
-        program.programId
+    program.programId
     )[0],
-}
+  }
 ```
 Notice that `userReserve` is a function. This lets you dynamically generate a unique PDA for each user based on their public key.  
 By deriving PDAs this way, you ensure your client always uses the correct accounts — exactly how your program expects them.
@@ -222,7 +246,7 @@ This function should transfer SOL from a PDA (like BankInfo) back to a user.
 Since a PDA can’t sign on its own, you’ll need to use `invoke_signed()` and pass the correct `signers_seeds`
 
 2. **Complete the `Withdraw` Instruction**  
-Allow users to withdraw their deposited SOL from the vault (i.e., from the `BankInfo` PDA).  
+Allow users to withdraw their deposited SOL from the vault (i.e., from the Bank Vault PDA).  
 We’ve already provided the PDA seeds for this instruction — just plug them in to use `invoke_signed()` properly.
 
 3. **Implement the `Pause` Instruction**  

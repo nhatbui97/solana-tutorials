@@ -16,6 +16,10 @@ describe("bank-app", () => {
       [Buffer.from("BANK_INFO_SEED")],
       program.programId
     )[0],
+    bankVault: PublicKey.findProgramAddressSync(
+      [Buffer.from("BANK_VAULT_SEED")],
+      program.programId
+    )[0],
     userReserve: (pubkey: PublicKey) => PublicKey.findProgramAddressSync(
       [
         Buffer.from("USER_RESERVE_SEED"),
@@ -33,6 +37,7 @@ describe("bank-app", () => {
       const tx = await program.methods.initialize()
         .accounts({
           bankInfo: BANK_APP_ACCOUNTS.bankInfo,
+          bankVault: BANK_APP_ACCOUNTS.bankVault,
           authority: provider.publicKey,
           systemProgram: SystemProgram.programId
         }).rpc();
@@ -44,6 +49,7 @@ describe("bank-app", () => {
     const tx = await program.methods.deposit(new BN(1_000_000))
       .accounts({
         bankInfo: BANK_APP_ACCOUNTS.bankInfo,
+        bankVault: BANK_APP_ACCOUNTS.bankVault,
         userReserve: BANK_APP_ACCOUNTS.userReserve(provider.publicKey),
         user: provider.publicKey,
         systemProgram: SystemProgram.programId
