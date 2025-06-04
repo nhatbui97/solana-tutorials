@@ -17,6 +17,10 @@ describe("bank-app", () => {
       [Buffer.from("BANK_INFO_SEED")],
       program.programId
     )[0],
+    bankVault: PublicKey.findProgramAddressSync(
+      [Buffer.from("BANK_VAULT_SEED")],
+      program.programId
+    )[0],
     userReserve: (pubkey: PublicKey, tokenMint?: PublicKey) => {
       let SEEDS = [
         Buffer.from("USER_RESERVE_SEED"),
@@ -42,6 +46,7 @@ describe("bank-app", () => {
       const tx = await program.methods.initialize()
         .accounts({
           bankInfo: BANK_APP_ACCOUNTS.bankInfo,
+          bankVault: BANK_APP_ACCOUNTS.bankVault,
           authority: provider.publicKey,
           systemProgram: SystemProgram.programId
         }).rpc();
@@ -53,6 +58,7 @@ describe("bank-app", () => {
     const tx = await program.methods.deposit(new BN(1_000_000))
       .accounts({
         bankInfo: BANK_APP_ACCOUNTS.bankInfo,
+        bankVault: BANK_APP_ACCOUNTS.bankVault,
         userReserve: BANK_APP_ACCOUNTS.userReserve(provider.publicKey),
         user: provider.publicKey,
         systemProgram: SystemProgram.programId
@@ -66,14 +72,14 @@ describe("bank-app", () => {
   it("Is deposited token!", async () => {
     let tokenMint = new PublicKey("FBUoe8bLbPBh4VcF4jwg1L53XZBdSJoERry16u26UnNL") //you should put your token mint here
     let userAta = getAssociatedTokenAddressSync(tokenMint, provider.publicKey)
-    let bankAta = getAssociatedTokenAddressSync(tokenMint, BANK_APP_ACCOUNTS.bankInfo, true)
+    let bankAta = getAssociatedTokenAddressSync(tokenMint, BANK_APP_ACCOUNTS.bankVault, true)
 
     let preInstructions: TransactionInstruction[] = []
     if (await provider.connection.getAccountInfo(bankAta) == null) {
       preInstructions.push(createAssociatedTokenAccountInstruction(
         provider.publicKey,
         bankAta,
-        BANK_APP_ACCOUNTS.bankInfo,
+        BANK_APP_ACCOUNTS.bankVault,
         tokenMint
       ))
     }
@@ -81,6 +87,7 @@ describe("bank-app", () => {
     const tx = await program.methods.depositToken(new BN(1_000_000_000))
       .accounts({
         bankInfo: BANK_APP_ACCOUNTS.bankInfo,
+        bankVault: BANK_APP_ACCOUNTS.bankVault,
         tokenMint,
         userAta,
         bankAta,

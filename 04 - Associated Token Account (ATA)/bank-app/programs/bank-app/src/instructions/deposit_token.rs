@@ -1,11 +1,11 @@
-use anchor_lang::prelude::*;
+use anchor_lang::{prelude::*, system_program};
 use anchor_spl::{
     token::Token,
     token_interface::{Mint, TokenAccount},
 };
 
 use crate::{
-    constant::{BANK_INFO_SEED, USER_RESERVE_SEED},
+    constant::{BANK_INFO_SEED, BANK_VAULT_SEED, USER_RESERVE_SEED},
     error::BankAppError,
     state::{BankInfo, UserReserve},
     transfer_helper::token_transfer_from_user,
@@ -14,11 +14,19 @@ use crate::{
 #[derive(Accounts)]
 pub struct DepositToken<'info> {
     #[account(
-        mut,
         seeds = [BANK_INFO_SEED],
         bump
     )]
     pub bank_info: Box<Account<'info, BankInfo>>,
+
+    ///CHECK:
+    #[account(
+        mut,
+        seeds = [BANK_VAULT_SEED],
+        bump,
+        owner = system_program::ID
+    )]
+    pub bank_vault: UncheckedAccount<'info>,
 
     #[account(mut)]
     pub token_mint: Box<InterfaceAccount<'info, Mint>>,
@@ -33,7 +41,7 @@ pub struct DepositToken<'info> {
     #[account(
         mut,
         associated_token::mint = token_mint,
-        associated_token::authority = bank_info
+        associated_token::authority = bank_vault
     )]
     pub bank_ata: Box<InterfaceAccount<'info, TokenAccount>>,
 

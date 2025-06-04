@@ -175,7 +175,7 @@ Example:
 ```ts
 let tokenMint = new PublicKey("FBUoe8bLbPBh4VcF4jwg1L53XZBdSJoERry16u26UnNL") //you should put your token mint here
 let userAta = getAssociatedTokenAddressSync(tokenMint, provider.publicKey)
-let bankAta = getAssociatedTokenAddressSync(tokenMint, BANK_APP_ACCOUNTS.bankInfo, true)
+let bankAta = getAssociatedTokenAddressSync(tokenMint, BANK_APP_ACCOUNTS.bankVault, true)
 ```
 
 #### 🏗️ Creating the ATA with `createAssociatedTokenAccountInstruction`
@@ -213,7 +213,7 @@ if (await provider.connection.getAccountInfo(bankAta) == null) {
   preInstructions.push(createAssociatedTokenAccountInstruction(
     provider.publicKey,
     bankAta,
-    BANK_APP_ACCOUNTS.bankInfo,
+    BANK_APP_ACCOUNTS.bankVault,
     tokenMint
   ))
 }
@@ -221,6 +221,7 @@ if (await provider.connection.getAccountInfo(bankAta) == null) {
 const tx = await program.methods.depositToken(new BN(1_000_000_000))
   .accounts({
     bankInfo: BANK_APP_ACCOUNTS.bankInfo,
+    bankVault: BANK_APP_ACCOUNTS.bankVault,
     tokenMint,
     userAta,
     bankAta,
