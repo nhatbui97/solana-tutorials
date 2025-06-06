@@ -92,7 +92,7 @@ Before you can receive tokens, you need somewhere to put them. That’s where th
 
 Create it by running:
 ```bash
-spl-token create-token <TOKEN_MINT_ADDRESS>
+spl-token create-account <TOKEN_MINT_ADDRESS>
 ```
 Example output:
 ```bash
