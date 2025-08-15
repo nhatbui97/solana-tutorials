@@ -29,9 +29,9 @@ Then, check if Rust has been successfully installed:
 rustc --version
 ```
 
-To ensure compatibility with the Anchor framework stable version (will be installed in the next part), we should set the Rust version to 1.79.0:
+To ensure compatibility with the Anchor framework stable version (will be installed in the next part), we should set the Rust version to 1.83.0:
 ```bash
-rustup default 1.79.0
+rustup default 1.83.0
 ```
 
 ### 2. Install The Solana CLI 
