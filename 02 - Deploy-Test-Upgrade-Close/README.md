@@ -273,6 +273,11 @@ Next, let's find the size of the new `.so` file that was built by Anchor:
 stat -f%z target/deploy/my_first_anchor_project.so 
 ```
 
+in Linux it is
+```bash
+stat -c %s target/deploy/bank_app.so 
+```
+
 This should return 181,272 bytes. That means the new version of your program is slightly larger. So you’ll need to extend your program's account by `181272 - 180408 = 864` bytes  
 
 You can now extend the program’s allocated space before upgrading:
