@@ -18,7 +18,7 @@ A successful installation will return output like the following:
 Installed Versions:
 Rust: rustc 1.90.0 (1159e78c4 2025-09-14)
 Solana CLI: solana-cli 2.3.13 (src:5466f459; feat:2142755730, client:Agave)
-Anchor CLI: 0.32.1
+Anchor CLI: 0.31.1
 Node.js: v24.10.0
 Yarn: 1.22.22
 ```
@@ -51,7 +51,7 @@ rustc --version
 
 To ensure compatibility with the Anchor framework stable version (will be installed in the next part), we should set the Rust version to 1.83.0:
 ```bash
-rustup default 1.83.0
+rustup default 1.90.0
 ```
 
 ### 2. Install The Solana CLI 
@@ -60,7 +60,7 @@ To interact with the Solana blockchain, you need to install the Solana Command L
 
 Run the following command to download and install the Solana CLI:
 ```bash
-sh -c "$(curl -sSfL https://release.anza.xyz/v1.18.21/install)"
+sh -c "$(curl -sSfL https://release.anza.xyz/v2.3.0/install)"
 ```
 
 After installation, update your environment so the `solana` command is available:
@@ -231,9 +231,9 @@ DO THIS IN WINDOWS TERMINAL, NOT VSCODE TERMINAL
 
 
 
-- Right now solana-cli version above 0.30 is recommended, install 0.29.0 is a bit tricky, and messy. If forced, can still do this but contact me.
+- Right now solana-cli version above 0.30 is recommended, 0.31.0 specifically, install 0.29.0 is a bit tricky, and messy. If forced, can still do this but contact me.
 - When running `anchor build` with lower solana version like 0.29, this problem can occured: "rustc v1.75 or above ... bla bla bla" but when you check your rustc version, its 1.83, 1.90, so why its still error? it is because the solana-install, anchor use it own rustc version and it is outdated.  If this happen then you must install the agave-install 
-follow this instruction https://docs.anza.xyz/cli/install, change v3.0.8 to v2.3.0 - the stable least error version. Then proceed to anchor build, again.
+follow this instruction https://docs.anza.xyz/cli/install, change v3.0.8 to v2.3.0 - the most stable version. Then proceed to anchor build, again.
 
 If you run into build-sbf not found, the most likely you have not listened to me - and install both v0.29.0 and v0.30, then uninstall v0.29.0, or check agave-install/solana-install whether if it 1.18 or above v2, if it v2 then your solana-cli outdated, if v1.18 or under v2, then update to above v2. your problem will be solved. If not then contact me.
 
