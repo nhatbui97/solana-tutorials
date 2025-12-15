@@ -16,9 +16,9 @@ curl --proto '=https' --tlsv1.2 -sSfL https://solana-install.solana.workers.dev 
 A successful installation will return output like the following:
 ```
 Installed Versions:
-Rust: rustc 1.90.0 (1159e78c4 2025-09-14)
+Rust: rustc 1.91.0 
 Solana CLI: solana-cli 2.3.13 (src:5466f459; feat:2142755730, client:Agave)
-Anchor CLI: 0.31.1
+Anchor CLI: 0.32.1
 Node.js: v24.10.0
 Yarn: 1.22.22
 ```
@@ -27,9 +27,13 @@ verify again by:
 ```
 rustc --version && solana --version && anchor --version && node --version && yarn --version
 ```
+This will install THE NEWEST VERSION, not STABLE VERSION. In order to install stable versions, paste and run these following commands:
+```bash
+rustup default 1.90.0
+agave-install init 2.3.0
+avm use 0.31.1
 
-
-
+```
 ### 1. Install Rust
 
 Run the following command to install Rust:
@@ -49,7 +53,7 @@ Then, check if Rust has been successfully installed:
 rustc --version
 ```
 
-To ensure compatibility with the Anchor framework stable version (will be installed in the next part), we should set the Rust version to 1.83.0:
+To ensure compatibility with the Anchor framework stable version (will be installed in the next part), we should set the Rust version to 1.90.0:
 ```bash
 rustup default 1.90.0
 ```
@@ -131,7 +135,7 @@ avm --version
 ```
 
 Most major Solana protocols (as of 14 May 2025) - such as Jito, Jupiter, Raydium, Orca,... - still use Anchor 0.29.0 as their stable release.
-Update, this is outdated (11 Nov 25), we need to use v0.30 and above.
+Update, this is outdated (11 Nov 25), we need to use v0.30 and above, the most stable is 0.31.1.
 ```bash
 avm use 0.31.1
 ```
