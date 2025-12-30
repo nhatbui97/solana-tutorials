@@ -661,15 +661,13 @@ await program.rpc.myDynamicIx({
 
 #### Don't Use AccountInfo
 
-If, for some reason, you are not validating or checking a specific account (perhaps it’s not accessed directly or it’s being validated by another instruction), you can use UncheckedAccount<’info> instead of AccountInfo<’info>. It serves the same purpose in this context, is more explicit about not performing checks, and takes up considerably less space.
+If, for some reason, you are not validating or checking a specific account (perhaps it’s not accessed directly or it’s being validated by another instruction), you can use `UncheckedAccount<’info>` instead of `AccountInfo<’info>`. It serves the same purpose in this context, is more explicit about not performing checks, and takes up considerably less space.
 
 
 #### Zero-Copy
 When an account becomes very large (often after being grown over multiple transactions), loading it normally with `Account<T>` or even `Box<Account<T>>` can cause out-of-memory or stack violations, because Anchor tries to deserialize the whole account into your program’s memory.
 
 Zero-copy avoids that. Instead of copying the data into stack or heap, your program reads the bytes directly from the account’s memory buffer. Basically, you don't move the mountain, you work where the mountain directly is.
-
-
 
 
 ## Debugging 
