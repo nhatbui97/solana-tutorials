@@ -199,7 +199,10 @@ anchor-gen = "0.3.1"
 ```rust
 anchor_gen::generate_cpi_crate!("../../path/to-idl/idl.json"); 
 ```
-4. Run `cargo build` and you got the CPI.
+4. Run `cargo build` and you got the CPI. The `anchor-gen` repo does not gen the Rust file for the CPI, it generate the CPI **internally** using a proc macro, which can be seen using `cargo expand`.
+
+5. After generating the CPI crate, you import it:
+
 
 !!! Note that: `anchor-gen = 0.3.1` will only work with anchor under v0.29.0, and >0.30 you need to use `0.4.1` because of how IDL format change
 
@@ -212,4 +215,5 @@ anchor_gen::generate_cpi_crate!("../../path/to-idl/idl.json");
 And you good to go. 
 
 
-Now try it yourself, using the repo i gave, and convert the idl.json to CPI.
+
+Now try it yourself. Using the `anchor-gen`, convert idl.json (from staking-app), using that CPI generated, change the import in `bank-app`, and run the test. The result should be the same as before.
