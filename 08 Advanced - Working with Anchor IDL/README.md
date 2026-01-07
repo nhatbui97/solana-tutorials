@@ -216,4 +216,5 @@ And you good to go.
 
 
 
-Now try it yourself. Using the `anchor-gen`, convert idl.json (from staking-app), using that CPI generated, change the import in `bank-app`, and run the test. The result should be the same as before.
+## Exercise
+Now try it yourself. Using the `anchor-gen`, convert idl.json (from staking-app), using that CPI generated, change the import in `bank-app`, and run the test. The result should be the same as your older code version, not using the crate.

@@ -169,171 +169,78 @@ let current_index = instructions::load_current_index_checked(ix_account)?;
 let instruction = instructions::load_instruction_at_checked(index,ix_account)?;
 ```
 
-## Implementation example
-
-Here i will implement a simple example: initialization must be first instruction in any transaction.
+### Example
+When an instruction is hitting the stack limit, then you can simply split one instruction into two, with sysvar as the constraint. Here say you force a deposit function before a withdraw function:
 
 ```rust
 use anchor_lang::prelude::*;
-use solana_program::sysvar::instructions;
+use solana_program::sysvar::instructions as ix_sysvar;
 
 declare_id!("Your11111111111111111111111111111111111111");
 
+// In real code, compute this once off-chain via Anchor and paste it here.
+const DEPOSIT_DISCRIMINATOR: [u8; 8] = [0; 8]; // TODO: fill with real bytes
+
 #[program]
-pub mod instruction_ordering {
+pub mod simple_flow {
     use super::*;
-    
-    pub fn initialize(ctx: Context<Initialize>) -> Result<()> {
-        // Get current instruction index
-        let current_index = instructions::load_current_index_checked(
-            &ctx.accounts.instructions.to_account_info()
-        )?;
-        
-        // Must be first (index 0)
-        require!(
-            current_index == 0,
-            ErrorCode::MustBeFirstInstruction
-        );
-        
-        // Initialize state
-        let state = &mut ctx.accounts.state;
-        state.authority = ctx.accounts.authority.key();
-        state.counter = 0;
-        
-        msg!("Initialized as first instruction");
+
+    pub fn deposit(_ctx: Context<Deposit>, _amount: u64) -> Result<()> {
+        // ... your normal deposit logic ...
         Ok(())
     }
-    
-    pub fn increment(ctx: Context<Increment>) -> Result<()> {
-        ctx.accounts.state.counter += 1;
+
+    pub fn withdraw(ctx: Context<Withdraw>, _amount: u64) -> Result<()> {
+        // --- 1) Read current instruction index ---
+        let ix_acc = &ctx.accounts.instructions.to_account_info();
+        let current_index = ix_sysvar::load_current_index_checked(ix_acc)?;
+
+        // We need at least one instruction before this one
+        require!(current_index > 0, ErrorCode::MustDepositFirst);
+
+        // --- 2) Load previous instruction ---
+        let prev_ix = ix_sysvar::load_instruction_at_checked(
+            (current_index - 1) as usize,
+            ix_acc,
+        )?;
+
+        // Must be from this program
+        require!(prev_ix.program_id == crate::ID, ErrorCode::MustDepositFirst);
+
+        // --- 3) Check discriminator = `deposit` ---
+        require!(prev_ix.data.len() >= 8, ErrorCode::MustDepositFirst);
+        let disc = &prev_ix.data[0..8];
+        require!(disc == DEPOSIT_DISCRIMINATOR, ErrorCode::MustDepositFirst);
+
+        // --- 4) Now do normal withdraw logic ---
+        // ... your withdrawal logic here ...
+
         Ok(())
     }
 }
 
 #[derive(Accounts)]
-pub struct Initialize<'info> {
-    #[account(
-        init,
-        payer = authority,
-        space = 8 + 32 + 8,
-        seeds = [b"state"],
-        bump
-    )]
-    pub state: Account<'info, State>,
-    
-    #[account(mut)]
-    pub authority: Signer<'info>,
-    
-    pub system_program: Program<'info, System>,
-    
-    /// CHECK: Instructions sysvar
+pub struct Deposit<'info> {
+    // whatever accounts you need
+    pub user: Signer<'info>,
+}
+
+#[derive(Accounts)]
+pub struct Withdraw<'info> {
+    // whatever accounts you need
+    pub user: Signer<'info>,
+
+    /// CHECK: instructions sysvar
     #[account(address = solana_program::sysvar::instructions::ID)]
     pub instructions: UncheckedAccount<'info>,
 }
 
-#[derive(Accounts)]
-pub struct Increment<'info> {
-    #[account(
-        mut,
-        seeds = [b"state"],
-        bump
-    )]
-    pub state: Account<'info, State>,
-}
-
-#[account]
-pub struct State {
-    pub authority: Pubkey,
-    pub counter: u64,
-}
-
 #[error_code]
 pub enum ErrorCode {
-    #[msg("Initialize must be the first instruction")]
-    MustBeFirstInstruction,
+    #[msg("Transaction must have a deposit immediately before withdraw")]
+    MustDepositFirst,
 }
 ```
-
-Test file:
-
-```typescript
-import * as anchor from "@coral-xyz/anchor";
-import { expect } from "chai";
-import { SYSVAR_INSTRUCTIONS_PUBKEY, SystemProgram, Keypair } from "@solana/web3.js";
-
-describe("instruction-ordering", () => {
-  const provider = anchor.AnchorProvider.env();
-  anchor.setProvider(provider);
-  
-  const program = anchor.workspace.InstructionOrdering;
-  
-  const [statePda] = anchor.web3.PublicKey.findProgramAddressSync(
-    [Buffer.from("state")],
-    program.programId
-  );
-  
-  it("succeeds when initialize is first", async () => {
-    const tx = new anchor.web3.Transaction().add(
-      await program.methods
-        .initialize()
-        .accounts({
-          state: statePda,
-          authority: provider.wallet.publicKey,
-          systemProgram: SystemProgram.programId,
-          instructions: SYSVAR_INSTRUCTIONS_PUBKEY,
-        })
-        .instruction()
-    );
-    
-    await provider.sendAndConfirm(tx);
-    
-    const state = await program.account.state.fetch(statePda);
-    expect(state.counter.toNumber()).to.equal(0);
-  });
-  
-  it("fails when initialize is not first", async () => {
-    const dummyIx = SystemProgram.transfer({
-      fromPubkey: provider.wallet.publicKey,
-      toPubkey: Keypair.generate().publicKey,
-      lamports: 1,
-    });
-    
-    const tx = new anchor.web3.Transaction()
-      .add(dummyIx)
-      .add(
-        await program.methods
-          .initialize()
-          .accounts({
-            state: statePda,
-            authority: provider.wallet.publicKey,
-            systemProgram: SystemProgram.programId,
-            instructions: SYSVAR_INSTRUCTIONS_PUBKEY,
-          })
-          .instruction()
-      );
-    
-    try {
-      await provider.sendAndConfirm(tx);
-      expect.fail("Should have failed");
-    } catch (err) {
-      expect(err.message).to.include("MustBeFirstInstruction");
-    }
-  });
-  
-  it("can increment after initialization", async () => {
-    await program.methods
-      .increment()
-      .accounts({
-        state: statePda,
-      })
-      .rpc();
-    
-    const state = await program.account.state.fetch(statePda);
-    expect(state.counter.toNumber()).to.equal(1);
-  });
-});
-```
-
 
 ## Common Patterns
 ### Pattern 1: Must Be First
@@ -422,8 +329,6 @@ Program failed to complete: Access violation in stack frame 7 at address 0x20000
 Program {program_address} failed: Program failed to complete
 ```
 
-
-
 ## invoke_signed - CPI
 ### The Problem with CPI chains 
 
@@ -482,35 +387,7 @@ invoke_signed(
 ```
 
 
-
-
 ## Handling the Overflow
-
-### Account Limit
-There are more than one solutions for this:
-#### Multiple Instructions
-Instead of one instruction with 200 accounts, create multiple instructions:
-
-```rust
-// ❌ Won't work: Too many accounts
-pub fn process_all_users(ctx: Context<ProcessAll>) -> Result<()> {
-    // Tries to process 200 user accounts at once
-    for user in ctx.remaining_accounts.iter() {
-        // process...
-    }
-    Ok(())
-}
-
-// ✅ Works: Process in batches
-pub fn process_batch(ctx: Context<ProcessBatch>, start: u32, end: u32) -> Result<()> {
-    // Process users from start to end (max 100 per call)
-    for i in start..end {
-        let user = &ctx.remaining_accounts[(i - start) as usize];
-        // process...
-    }
-    Ok(())
-}
-```
 
 #### Lookup Tables (Advanced)
 
@@ -539,6 +416,58 @@ const tx = new VersionedTransaction(message);
 
 ### Stack Frame Optimization
 To optimize the memory usage in Solana, you can use these techniques:
+
+#### Zero-Copy
+When an account becomes very large (often after being grown over multiple transactions), loading it normally with `Account<T>` or even `Box<Account<T>>` can cause out-of-memory or stack violations, because Anchor tries to deserialize the whole account into your program’s memory.
+
+Zero-copy avoids that. Instead of copying the data into stack or heap, your program reads the bytes directly from the account’s memory buffer. Basically, you don't move the mountain, you work where the mountain directly is.
+
+Normally, when you write:
+```rust
+let vault = &mut ctx.accounts.vault;
+```
+Anchor gives a Rust struct that lives on the stack.
+If the account struct is small, then no problem. But what if it becomes large:
+```rust
+#[account]
+pub struct BigData {
+    pub owner: Pubkey,
+    pub values: [u64; 2000],   // <- big!
+}
+```
+then each time an instruction loads it, Rust tries to copy all that on to the stack.
+
+With zero-copy, you point directly to the account data:
+```rust
+#[account(zero_copy)]
+#[repr(packed)]
+pub struct BigData {
+    pub owner: Pubkey,
+    pub values: [u64; 2000],
+}
+```
+And instead of `Account<T>`, we use, `AccountLoader<BigData>`.
+
+Then we access it like this:
+```rust
+let mut data = ctx.accounts.big_data.load_mut()?;
+```
+
+So why don't we use Zero-Copy all the time?
+We only use when storing fixed-size structured data like: 
+- positions
+- order books
+- large arrays
+- history buffer
+
+We don't use if:
+- you expect the layout to change later
+- you want simpler, safer code
+- you need dynamic fields:
+  - Vec<T>
+  - String
+  - optional / variable-length data
+
 #### Allocate Big Account on the Heap
 It’s generally a good practice to allocate larger accounts on the heap. While you can’t allocate programs this way and heap accounts need to be deserialized (So you can't do it on Unchecked Accounts), this method can save a significant amount of stack space.
 ``` rust
@@ -664,10 +593,6 @@ await program.rpc.myDynamicIx({
 If, for some reason, you are not validating or checking a specific account (perhaps it’s not accessed directly or it’s being validated by another instruction), you can use `UncheckedAccount<’info>` instead of `AccountInfo<’info>`. It serves the same purpose in this context, is more explicit about not performing checks, and takes up considerably less space.
 
 
-#### Zero-Copy
-When an account becomes very large (often after being grown over multiple transactions), loading it normally with `Account<T>` or even `Box<Account<T>>` can cause out-of-memory or stack violations, because Anchor tries to deserialize the whole account into your program’s memory.
-
-Zero-copy avoids that. Instead of copying the data into stack or heap, your program reads the bytes directly from the account’s memory buffer. Basically, you don't move the mountain, you work where the mountain directly is.
 
 
 ## Debugging 
@@ -699,3 +624,27 @@ Program YourProgram success
 ```
 
 
+
+
+
+## Exercise
+In this exercise, you'll implement a **sequential approval system** that requires two instructions in order, then optimize it with zero-copy to handle large data.
+
+### Part 1: Sequential Approval
+Build a system where `execute` can only run if `approve` ran immediately before it in the same transaction.
+1. Create an `approve` instruction that records approval
+2. Create an `execute` instruction that:
+   - Checks if previous instruction was `approve`
+   - Verifies it's from the same program
+   - Only executes if approval is valid
+
+
+
+
+### Part 2: Optimize with Zero-Copy
+Now create a version that handles large data efficiently using zero-copy.
+
+Requirements:
+- Add a LargeApprovalData struct with array of 512 u64 values
+- Compare regular Account<T> vs AccountLoader<T>
+- Measure which approach avoids stack overflow. Observe how a large regular Account<T> runs into BPF stack limit errors at build time, while a zero-copy AccountLoader<T> can handle the same-sized data safely.
